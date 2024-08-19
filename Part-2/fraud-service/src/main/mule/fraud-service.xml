@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:vm="http://www.mulesoft.org/schema/mule/vm" xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="5bb7b3a4-c2ce-4de1-b49a-1b250b5967cd" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="9c3678f4-ef2b-4af5-a0b7-bee696b12772" basePath="/accounts" >
+		<http:request-connection host="localhost" port="9000" />
+	</http:request-config>
+	<http:request-config name="HTTP_Request_configuration1" doc:name="HTTP Request configuration" doc:id="15632e92-9ede-4e39-861b-d3f38406779e" basePath="/accounts" >
+		<http:request-connection host="localhost" port="9001" />
+	</http:request-config>
+	<http:request-config name="HTTP_Request_configuration2" doc:name="HTTP Request configuration" doc:id="5a32effc-8e27-4d68-8b2a-f62c32860f37" basePath="/aml" >
+		<http:request-connection host="localhost" port="9000" />
+	</http:request-config>
+	<http:request-config name="HTTP_Request_configuration3" doc:name="HTTP Request configuration" doc:id="3cd0a154-71ca-44ae-b721-54f6de268601" basePath="/aml" >
+		<http:request-connection host="localhost" port="9000" />
+	</http:request-config>
+	<file:config name="File_Config" doc:name="File Config" doc:id="ac5fb742-bdb2-4f85-9aa9-4f41ef88e531" >
+		<file:connection workingDir="/Users/yauritux/AnypointStudio/demo/fraud-report" />
+	</file:config>
+	<flow name="FraudServiceFlow" doc:id="0574cdf6-337c-4f85-b64e-7155e1d27e06" >
+		<http:listener doc:name="GET /frauds?accountId={id}" doc:id="d9987d23-830b-4604-8751-7d08843b67e7" config-ref="HTTP_Listener_config" path="/frauds"/>
+		<logger level="INFO" doc:name="Logger" doc:id="55b807a2-b4cd-4d92-952b-251ce691d1ee" message='#[attributes.queryParams.accountId]'/>
+		<http:request method="GET" doc:name="GET /accounts/{accountId}" doc:id="998d93cf-a25d-480d-8d0b-45f756411629" config-ref="HTTP_Request_configuration1" path='#["/" ++ attributes.queryParams.accountId]'/>
+		<set-variable value="#[payload.id]" doc:name="Set Account Number" doc:id="e0b81e0b-373c-47e4-8e47-3712a8b6fe20" variableName="accountNumber"/>
+		<http:request method="GET" doc:name="GET /aml/{id}" doc:id="a2e020e8-bae7-47b6-b419-b302ed22ba74" config-ref="HTTP_Request_configuration3" path="#[payload.id]"/>
+		<choice doc:name="Choice" doc:id="c07b965f-60eb-48cb-86a0-1df05d647f6e" >
+			<when expression='#[payload.message == "No Fraud Detected"]'>
+				<logger level="INFO" doc:name="Logger" doc:id="76e0ca5f-0440-4213-8215-6d2e96c4c8bc" message="*** NO FRAUD DETECTED ***"/>
+				<ee:transform doc:name="Transform Message" doc:id="a069f981-453d-4b2b-a105-aa757f7488ae" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"accountNumber": vars.accountNumber,
+	"message": payload.message
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger" doc:id="4f36534d-d026-4ada-b337-2716230e1070" message="*** FRAUD DETECTED ***"/>
+				<set-variable value="#[payload.message]" doc:name="Set Response Message" doc:id="4443a5f3-4ade-480d-8323-0c02094c98a3" variableName="response_message"/>
+				<scatter-gather doc:name="Scatter-Gather" doc:id="fe70049a-f19a-4239-bfcc-ff85cc81109f" >
+					<route >
+						<file:write doc:name="Generate Fraud Report" doc:id="803db3c2-a22d-4a14-af28-9bb991278c83" config-ref="File_Config" path='#[vars.accountNumber ++ ".json"]'/>
+					</route>
+					<route >
+						<logger level="INFO" doc:name="Logger" doc:id="e5de2d3b-1a22-48d8-b688-cb2f7de4299c" message="#[payload]"/>
+					</route>
+				</scatter-gather>
+				<ee:transform doc:name="Transform Message" doc:id="7f0d08f3-de05-4d2c-92e0-4fab1d583026" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"accountNumber": vars.accountNumber,
+	"message": vars.response_message
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="99d129f0-f39a-4054-9566-257f59a7dc60" >
+				<logger level="INFO" doc:name="Logger" doc:id="b207b236-9f03-4a7f-ac70-4f31d0985bf6" message="#[payload]"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+</mule>

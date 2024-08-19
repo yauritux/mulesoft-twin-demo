@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:vm="http://www.mulesoft.org/schema/mule/vm" xmlns:java="http://www.mulesoft.org/schema/mule/java"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/java/current/mule-java.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd">
+	<vm:config name="customers-queue" doc:name="VM Config" doc:id="e2247575-31fc-45b4-92cb-09d1a8baf22e" >
+		<vm:queues >
+			<vm:queue queueName="customers" maxOutstandingMessages="-1" />
+		</vm:queues>
+	</vm:config>
+	<flow name="troubleshooting-exerciseFlow" doc:id="b82aa160-2833-4ffd-9639-37e459066fdc" >
+		<scheduler doc:name="Scheduler" doc:id="bc727480-5127-4818-822d-890329899ecc" >
+			<scheduling-strategy >
+				<fixed-frequency />
+			</scheduling-strategy>
+		</scheduler>
+		<java:invoke-static doc:name="Retrieve Customers from DB" doc:id="cac5726c-43dd-4914-b5d7-c95f8824a287" class="com.support.RetrieveCustomersFromDB" method="retrieve()"/>
+		<vm:publish doc:name="Publish Customers" doc:id="fb56d4c4-d27a-4103-b879-f9118df38238" config-ref="customers-queue" sendCorrelationId="AUTO" queueName="customers"/>
+	</flow>
+	<flow name="troubleshooting-exerciseFlow1" doc:id="5f7b1929-3b2d-4aa5-ab9a-8289e3d8c11b" >
+		<scheduler doc:name="Scheduler" doc:id="5b3aafe2-7652-4390-aaa5-0364d05f8a6f" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="5000"/>
+			</scheduling-strategy>
+		</scheduler>
+		<vm:consume queueName="customers" doc:name="Consume Customers" doc:id="9a127d1c-a69f-4ff1-8d06-ca03b00bf10e" config-ref="customers-queue"/>
+		<logger level="INFO" doc:name="Logger" doc:id="145b6e6f-556e-40b3-8d78-8b8f44d48907" message="Consumed Customer!! #[payload]"/>
+	</flow>
+</mule>

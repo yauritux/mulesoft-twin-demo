@@ -1,0 +1,27 @@
+{
+  "configs": [
+    "troubleshooting-exercise.xml"
+  ],
+  "secureProperties": [],
+  "supportedJavaVersions": [],
+  "redeploymentEnabled": true,
+  "name": "com.mulsoft.service:troubleshooting-exercise:1.0.0-SNAPSHOT",
+  "minMuleVersion": "4.1.3",
+  "requiredProduct": "MULE",
+  "classLoaderModelLoaderDescriptor": {
+    "id": "mule",
+    "attributes": {
+      "exportedResources": [
+        "log4j2.xml",
+        "troubleshooting-exercise.xml"
+      ],
+      "exportedPackages": [
+        "com.support"
+      ]
+    }
+  },
+  "bundleDescriptorLoader": {
+    "id": "mule",
+    "attributes": {}
+  }
+}
